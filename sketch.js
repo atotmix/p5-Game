@@ -59,7 +59,7 @@ function menu(){
     textFont("Faster One");
     text("MathRacer",width/2-10,90);
     if(runOnce == false){
-        console.log("please dont tell me");
+
         startButton = createSprite(width/2, height-400);
         startButton.addImage("unpressed",startImg[0]);
         startButton.addImage("pressed",startImg[1]);
