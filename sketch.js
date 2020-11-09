@@ -2,6 +2,8 @@ var highScore;
 var inGame = false;
 var runOnce = false;
 var menuPage = 1;
+var stats = ""
+
 function preload(){
   highScore = getItem('highScore');
    if (highScore === null) {
@@ -15,6 +17,7 @@ function preload(){
    startImg = [loadImage("assets/Buttons/start1.png"),loadImage("assets/Buttons/start2.png")]
    helpImg = [loadImage("assets/Buttons/help1.png"),loadImage("assets/Buttons/help2.png")]
    optionsImg = [loadImage("assets/Buttons/opt1.png"),loadImage("assets/Buttons/opt2.png")]
+   trackImg = loadImage("assets/Road/track1.png")
 }
 
 function questionGen(difficulty) {
@@ -32,7 +35,7 @@ function questionGen(difficulty) {
 }
 function removeSprites(){
   for (var i = 0; i <= allSprites.length + 1; i++) {
-    menuButtons[0].remove();
+    allSprites[0].remove();
   }
 }
 function setup() {
@@ -42,14 +45,20 @@ function setup() {
 }
 
 function draw() {
+
   if (inGame){
-    background(50);
+
+    game();
   }
   else{
     menu();
   }
   drawSprites();
+  showStats();
 }
+
+
+
 function menu(){
   background(50);
   if(menuPage == 1){
@@ -59,7 +68,6 @@ function menu(){
     textFont("Faster One");
     text("MathRacer",width/2-10,90);
     if(runOnce == false){
-
         startButton = createSprite(width/2, height-400);
         startButton.addImage("unpressed",startImg[0]);
         startButton.addImage("pressed",startImg[1]);
@@ -107,4 +115,78 @@ function menu(){
   } else if(menuPage == 3){
       background(150);
   }
+}
+function capMomentum(sprite){
+  if (sprite.angularMomentum > 0){
+    sprite.angularMomentum -= 0.2;//0.2
+  }else{
+    if(sprite.angularMomentum < 0){
+      sprite.angularMomentum += 0.2;//0.2
+    }
+  }
+  if (sprite.angularMomentum > 4){
+    sprite.angularMomentum = 4
+  }
+  if (sprite.angularMomentum < -4){
+    sprite.angularMomentum = -4
+  }
+  sprite.rotation += sprite.angularMomentum;
+}
+function keyInput() {
+  if (keyDown("d")){
+    player.angularMomentum += 0.27;
+    //spike.rotation += 3
+  }
+  if (keyDown("a")){
+    player.angularMomentum -= 0.27;
+    //spike.rotation -= 3;
+  }
+  if (keyDown("w")){
+  player.setSpeed(sqrt(player.velocity.y**2+player.velocity.x**2)+0.2,player.rotation);
+  }
+  if (keyDown("space")){
+  player.setSpeed(sqrt(player.velocity.y**2+player.velocity.x**2)-0.3,player.rotation);
+  }
+
+}
+function showStats(){
+  textAlign(RIGHT, TOP);
+  fill(255);
+  textSize(12);
+  textFont("Arial");
+  text(stats, camera.position.x +(width/2-10), camera.position.y - (height/2) + 10);
+}
+function addStats(info){
+  stats = info;
+   //The 2 part add /show stats is needed to allow me to show text from within the game func
+  //This is because otherwise the text will show behind sprites, which is not ideal
+}
+function game(){
+  background(233,221,181);
+  if(runOnce == false){
+    camera.on();
+    track = createSprite(1120 + (width/2),-500 + (height/2));
+    track.addImage(trackImg);
+    player = createSprite(width/2, height/2 + 200);
+    player.addImage(carImg);
+    player.friction = 0.02;
+    player.scale = 0.2;
+    player.angularMomentum = 0;
+    player.rotation = -90;
+    runOnce=true;
+  }
+
+  camera.position = player.position
+  capMomentum(player);
+  keyInput();
+  if(!track.overlapPixel(player.position.x,player.position.y)){
+    if(player.friction < 0.4){
+      player.friction += 0.005
+    }
+  }
+  else{
+    player.friction = 0.02;
+  }
+
+  addStats("X: " +Math.floor(player.position.x)+ " Y: "+ Math.floor(player.position.y));
 }
