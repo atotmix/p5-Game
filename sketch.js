@@ -2,7 +2,7 @@ var highScore;
 var inGame = false;
 var runOnce = false;
 var menuPage = 1;
-var stats = ""
+var stats = []
 
 function preload(){
   highScore = getItem('highScore');
@@ -45,7 +45,7 @@ function setup() {
 }
 
 function draw() {
-
+  stats = [];
   if (inGame){
 
     game();
@@ -150,14 +150,19 @@ function keyInput() {
 
 }
 function showStats(){
-  textAlign(RIGHT, TOP);
-  fill(255);
-  textSize(12);
-  textFont("Arial");
-  text(stats, camera.position.x +(width/2-10), camera.position.y - (height/2) + 10);
+  if(stats.length > 0 && stats != null){
+    for (var i = 0; i < stats.length; i++) {
+      textAlign(stats[i][0], stats[i][1]);
+      fill(stats[i][4]);
+      textSize(stats[i][5]);
+      textFont(stats[i][6]);
+      text(stats[i][7], camera.position.x - (width/2) +stats[i][2] , camera.position.y - (height/2) + stats[i][3]);
+    }
+  }
 }
-function addStats(info){
-  stats = info;
+function addStats(allignmentX,allignmentY,positionX,positionY,color,fontSize,font,text){
+  temp = [allignmentX,allignmentY,positionX,positionY,color,fontSize,font,text]
+  stats.push(temp)
    //The 2 part add /show stats is needed to allow me to show text from within the game func
   //This is because otherwise the text will show behind sprites, which is not ideal
 }
@@ -183,10 +188,11 @@ function game(){
     if(player.friction < 0.4){
       player.friction += 0.005
     }
+    addStats(CENTER, CENTER, (width/2), (height/2),color(0,255,0),24,"Arial", "Off roading!");
   }
   else{
     player.friction = 0.02;
   }
+  addStats(RIGHT, TOP, width-10, 10,255,12,"Arial", "X: " +Math.floor(player.position.x)+ " Y: "+ Math.floor(player.position.y));
 
-  addStats("X: " +Math.floor(player.position.x)+ " Y: "+ Math.floor(player.position.y));
 }
