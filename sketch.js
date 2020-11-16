@@ -3,7 +3,8 @@ var inGame = false;
 var runOnce = false;
 var menuPage = 1;
 var stats = []
-
+var boxtext = []
+var lastOnTrack;
 function preload(){
   highScore = getItem('highScore');
    if (highScore === null) {
@@ -11,7 +12,7 @@ function preload(){
    }
    carImg = loadImage("assets/Car.png");
    boxImg = loadImage("assets/Emoji/1F7E5.png");
-   treeImg = [loadImage("assets/Emoji/1F333.png"),loadImage("assets/Emoji/1F334.png")];
+   treeImg = loadImage("assets/Emoji/1F334.png");
    crossImg = loadImage("assets/Emoji/274C.png");
    tickImg = loadImage("assets/Emoji/2714.png");
    startImg = [loadImage("assets/Buttons/start1.png"),loadImage("assets/Buttons/start2.png")]
@@ -33,19 +34,21 @@ function questionGen(difficulty) {
     return (a + operator + b);
   }
 }
-function removeSprites(){
-  for (var i = 0; i <= allSprites.length + 1; i++) {
-    allSprites[0].remove();
-  }
-}
+
 function setup() {
   menuButtons = Group();
-  createCanvas(windowWidth - 20,windowHeight - 20)
+  cactus = Group();
+  createCanvas(windowWidth - 20,windowHeight - 20);
   // put setup code here
 }
 
 function draw() {
   stats = [];
+  if(boxtext.length > 0){
+    for (var i = 0; i < boxtext.length; i++){
+      stats.push(boxtext[i]);
+    }
+  }
   if (inGame){
 
     game();
@@ -78,7 +81,7 @@ function menu(){
           this.changeImage("unpressed");
           inGame = true;
           runOnce = false;
-          removeSprites();
+          allSprites.removeSprites();
         }
         menuButtons.add(startButton);
         infoButton = createSprite(width/2, height-300);
@@ -91,7 +94,7 @@ function menu(){
           this.changeImage("unpressed");
           menuPage = 2;
           runOnce = false;
-          removeSprites();
+          allSprites.removeSprites();
         }
         menuButtons.add(infoButton);
         optionsButton = createSprite(width/2, height-200);
@@ -104,7 +107,7 @@ function menu(){
           this.changeImage("unpressed");
           menuPage = 3;
           runOnce = false;
-          removeSprites();
+          allSprites.removeSprites();
         }
         menuButtons.add(optionsButton);
         runOnce = true;
@@ -118,10 +121,10 @@ function menu(){
 }
 function capMomentum(sprite){
   if (sprite.angularMomentum > 0){
-    sprite.angularMomentum -= 0.2;//0.2
+    sprite.angularMomentum /=1.12;//0.2
   }else{
     if(sprite.angularMomentum < 0){
-      sprite.angularMomentum += 0.2;//0.2
+      sprite.angularMomentum /= 1.12;//0.2
     }
   }
   if (sprite.angularMomentum > 4){
@@ -134,18 +137,18 @@ function capMomentum(sprite){
 }
 function keyInput() {
   if (keyDown("d")){
-    player.angularMomentum += 0.27;
-    //spike.rotation += 3
+    player.angularMomentum += 0.3;
+
   }
   if (keyDown("a")){
-    player.angularMomentum -= 0.27;
-    //spike.rotation -= 3;
+    player.angularMomentum -= 0.3;
+
   }
   if (keyDown("w")){
   player.setSpeed(sqrt(player.velocity.y**2+player.velocity.x**2)+0.2,player.rotation);
   }
   if (keyDown("space")){
-  player.setSpeed(sqrt(player.velocity.y**2+player.velocity.x**2)-0.3,player.rotation);
+  player.setSpeed(sqrt(player.velocity.y**2+player.velocity.x**2)+0.1,player.rotation +180);
   }
 
 }
@@ -161,10 +164,24 @@ function showStats(){
   }
 }
 function addStats(allignmentX,allignmentY,positionX,positionY,color,fontSize,font,text){
-  temp = [allignmentX,allignmentY,positionX,positionY,color,fontSize,font,text]
-  stats.push(temp)
+  temp = [allignmentX,allignmentY,positionX,positionY,color,fontSize,font,text];
+  stats.push(temp);
    //The 2 part add /show stats is needed to allow me to show text from within the game func
   //This is because otherwise the text will show behind sprites, which is not ideal
+}
+function spawnBoxes(x,y,rotated, Group){
+  question = questionGen(1);
+  answer = eval(question);
+  fakeAnswers = [answer + (Math.floor(Math.random() * 4)+1),
+    answer - (Math.floor(Math.random() * 4)+1),
+    answer - (Math.floor(Math.random() * 4)+1)]// do a nicer version
+  for(i = 0; i < 3; i++){
+    spr = createSprite(x+(i+1)*95,y);
+    spr.addImage(boxImg);
+    boxtext.push([CENTER,CENTER,+ camera.x +(x+(i+1)*95),y,255,17,"Arial",fakeAnswers[i]]);
+
+  }
+
 }
 function game(){
   background(233,221,181);
@@ -178,6 +195,19 @@ function game(){
     player.scale = 0.2;
     player.angularMomentum = 0;
     player.rotation = -90;
+/*    for(var i = 0; i < 64; i++){
+      posx = Math.floor(random(304,3493));
+      posy = Math.floor(random(-1758,1237));
+      if(!track.overlapPixel(posx+151,posy+226)){
+        var spr = createSprite(posx,posy);
+        spr.addImage(treeImg);
+        cactus.add(spr);
+      }
+      else{
+        console.log("Skipped")
+      }
+    }*/
+    spawnBoxes(294,219);
     runOnce=true;
   }
 
@@ -185,14 +215,25 @@ function game(){
   capMomentum(player);
   keyInput();
   if(!track.overlapPixel(player.position.x,player.position.y)){
-    if(player.friction < 0.4){
-      player.friction += 0.005
+    if(Date.now() - lastOnTrack > 34){
+      if(player.friction < 0.2){
+        player.friction += 0.005
+      }
+      addStats(CENTER, CENTER, (width/2), (height/2),color(255,0,0),24,"Arial", "Get back on the track!");
+      countdown = 11 + Math.floor((lastOnTrack - Date.now()) / 1000)
+      addStats(CENTER, CENTER, (width/2), (height/2) + 30,color(255,0,0),24,"Arial", "Restarting in: " +  countdown);
+      if(countdown == -1){
+        camera.position.x = width/2;
+        camera.position.y = height/2;
+        inGame = false;
+        runOnce = false;
+        allSprites.removeSprites();//dead
+      }
     }
-    addStats(CENTER, CENTER, (width/2), (height/2),color(0,255,0),24,"Arial", "Off roading!");
   }
   else{
     player.friction = 0.02;
+    lastOnTrack = Date.now();
   }
   addStats(RIGHT, TOP, width-10, 10,255,12,"Arial", "X: " +Math.floor(player.position.x)+ " Y: "+ Math.floor(player.position.y));
-
 }
