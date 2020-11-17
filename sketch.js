@@ -44,11 +44,7 @@ function setup() {
 
 function draw() {
   stats = [];
-  if(boxtext.length > 0){
-    for (var i = 0; i < boxtext.length; i++){
-      stats.push(boxtext[i]);
-    }
-  }
+
   if (inGame){
 
     game();
@@ -57,7 +53,9 @@ function draw() {
     menu();
   }
   drawSprites();
+  showBoxText();
   showStats();
+
 }
 
 
@@ -163,6 +161,17 @@ function showStats(){
     }
   }
 }
+function showBoxText(){
+  if(boxtext.length > 0 && boxtext != null){
+    for (var i = 0; i < boxtext.length; i++) {
+      textAlign(boxtext[i][0], boxtext[i][1]);
+      fill(boxtext[i][4]);
+      textSize(boxtext[i][5]);
+      textFont(boxtext[i][6]);
+      text(boxtext[i][7], boxtext[i][2], boxtext[i][3]);
+    }
+  }
+}
 function addStats(allignmentX,allignmentY,positionX,positionY,color,fontSize,font,text){
   temp = [allignmentX,allignmentY,positionX,positionY,color,fontSize,font,text];
   stats.push(temp);
@@ -178,7 +187,7 @@ function spawnBoxes(x,y,rotated, Group){
   for(i = 0; i < 3; i++){
     spr = createSprite(x+(i+1)*95,y);
     spr.addImage(boxImg);
-    boxtext.push([CENTER,CENTER,+ camera.x +(x+(i+1)*95),y,255,17,"Arial",fakeAnswers[i]]);
+    boxtext.push([CENTER,CENTER,(x+(i+1)*95), y,255,17,"Arial",fakeAnswers[i]]);
 
   }
 
@@ -207,7 +216,7 @@ function game(){
         console.log("Skipped")
       }
     }*/
-    spawnBoxes(294,219);
+    spawnBoxes(width/2 - 180, height/2 - 100);
     runOnce=true;
   }
 
@@ -227,6 +236,7 @@ function game(){
         camera.position.y = height/2;
         inGame = false;
         runOnce = false;
+        boxtext = []
         allSprites.removeSprites();//dead
       }
     }
