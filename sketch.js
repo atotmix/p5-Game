@@ -1,4 +1,5 @@
 var highScore;
+var score = 0;
 var inGame = false;
 var runOnce = false;
 var menuPage = 1;
@@ -34,10 +35,11 @@ function questionGen(difficulty) {
     return (a + operator + b);
   }
 }
-
 function setup() {
   menuButtons = Group();
   cactus = Group();
+  correctBoxes = Group();
+  incorrectBoxes = Group();
   createCanvas(windowWidth - 20,windowHeight - 20);
   // put setup code here
 }
@@ -178,18 +180,40 @@ function addStats(allignmentX,allignmentY,positionX,positionY,color,fontSize,fon
    //The 2 part add /show stats is needed to allow me to show text from within the game func
   //This is because otherwise the text will show behind sprites, which is not ideal
 }
-function spawnBoxes(x,y,rotated, Group){
-  question = questionGen(1);
+function genAnsArray(diff){
+  question = questionGen(diff);
   answer = eval(question);
-  fakeAnswers = [answer + (Math.floor(Math.random() * 4)+1),
-    answer - (Math.floor(Math.random() * 4)+1),
-    answer - (Math.floor(Math.random() * 4)+1)]// do a nicer version
+  question = question.replace("/","÷");
+  question = question.replace("*","×");
+  (Math.round(Math.random())) ? fakeAns1 = answer - (Math.floor(Math.random() * 6)+1) : fakeAns1 = answer + (Math.floor(Math.random() * 6)+1);
+  (Math.round(Math.random())) ? fakeAns2 = answer + (Math.floor(Math.random() * 6)+1) : fakeAns2 = answer - (Math.floor(Math.random() * 6)+1);
+
+  switch (Math.floor(Math.random()*3)){
+    case 0: return [answer,fakeAns1,fakeAns2,0,question];
+    break;
+    case 1: return [fakeAns1,answer,fakeAns2,1,question];
+    break;
+    case 2: return [fakeAns1,fakeAns2,answer,2,question];
+    break;
+  }
+}
+function correctAns(){
+  console.log("collided with correct answer")
+}
+function spawnBoxes(x,y,rotated, Group){
+  array = genAnsArray(3);
   for(i = 0; i < 3; i++){
     spr = createSprite(x+(i+1)*95,y);
     spr.addImage(boxImg);
-    boxtext.push([CENTER,CENTER,(x+(i+1)*95), y,255,17,"Arial",fakeAnswers[i]]);
-
+    spr.runOver = false;
+    boxtext.push([CENTER,CENTER,(x+(i+1)*95), y,255,20,"Arial",array[i]]);
+    if (array[3] == i){
+      correctBoxes.add(spr);
+    } else {
+      incorrectBoxes.add(spr);
+    }
   }
+  boxtext.push([CENTER,CENTER,x+190,y-70,255,18,"Arial",array[4]]);
 
 }
 function game(){
@@ -204,22 +228,25 @@ function game(){
     player.scale = 0.2;
     player.angularMomentum = 0;
     player.rotation = -90;
-/*    for(var i = 0; i < 64; i++){
-      posx = Math.floor(random(304,3493));
-      posy = Math.floor(random(-1758,1237));
-      if(!track.overlapPixel(posx+151,posy+226)){
-        var spr = createSprite(posx,posy);
-        spr.addImage(treeImg);
-        cactus.add(spr);
-      }
-      else{
-        console.log("Skipped")
-      }
-    }*/
-    spawnBoxes(width/2 - 180, height/2 - 100);
+
+    spawnBoxes(width/2 - 185, height/2 - 100);
     runOnce=true;
   }
+  for(i = 0; i < correctBoxes.length; i++){
+    if(correctBoxes[i].overlapPixel(player.position.x,player.position.y) && correctBoxes[i].runOver == false){
+      correctBoxes[i].runOver = true;
+      score++;
+      console.log("ye");
+    }
+  }
+  for(i = 0; i < incorrectBoxes.length; i++){
+    if(incorrectBoxes[i].overlapPixel(player.position.x,player.position.y) && incorrectBoxes[i].runOver == false){
+      incorrectBoxes[i].runOver = true;
 
+      console.log("no");
+      player.remove();
+    }
+  }
   camera.position = player.position
   capMomentum(player);
   keyInput();
@@ -232,12 +259,7 @@ function game(){
       countdown = 11 + Math.floor((lastOnTrack - Date.now()) / 1000)
       addStats(CENTER, CENTER, (width/2), (height/2) + 30,color(255,0,0),24,"Arial", "Restarting in: " +  countdown);
       if(countdown == -1){
-        camera.position.x = width/2;
-        camera.position.y = height/2;
-        inGame = false;
-        runOnce = false;
-        boxtext = []
-        allSprites.removeSprites();//dead
+        endGame();
       }
     }
   }
@@ -246,4 +268,15 @@ function game(){
     lastOnTrack = Date.now();
   }
   addStats(RIGHT, TOP, width-10, 10,255,12,"Arial", "X: " +Math.floor(player.position.x)+ " Y: "+ Math.floor(player.position.y));
+  addStats(LEFT, TOP, 10, 10,255,12,"Arial", "Score: " + score);
+
+}
+function endGame(){
+  camera.position.x = width/2;
+  camera.position.y = height/2;
+  inGame = false;
+  runOnce = false;
+  boxtext = []
+  allSprites.removeSprites();//dead
+  return "Ended :)"
 }
