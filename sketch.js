@@ -6,6 +6,7 @@ var menuPage = 1;
 var stats = []
 var boxtext = []
 var lastOnTrack;
+var endScreen = false;
 function preload(){
   highScore = getItem('highScore');
    if (highScore === null) {
@@ -16,10 +17,14 @@ function preload(){
    treeImg = loadImage("assets/Emoji/1F334.png");
    crossImg = loadImage("assets/Emoji/274C.png");
    tickImg = loadImage("assets/Emoji/2714.png");
+   endFlagImg = loadImage("assets/Emoji/1F3C1.png");
    startImg = [loadImage("assets/Buttons/start1.png"),loadImage("assets/Buttons/start2.png")]
    helpImg = [loadImage("assets/Buttons/help1.png"),loadImage("assets/Buttons/help2.png")]
    optionsImg = [loadImage("assets/Buttons/opt1.png"),loadImage("assets/Buttons/opt2.png")]
-   trackImg = loadImage("assets/Road/track1.png")
+   retryImg = [loadImage("assets/Buttons/retry1.png"),loadImage("assets/Buttons/retry2.png")]
+   trackImg = loadImage("assets/Road/track1.png");
+   engineSound = loadSound("assets/Sounds/Engine.ogg")
+   boxSound = [loadSound("assets/Sounds/Correct.ogg"),loadSound("assets/Sounds/Incorrect.ogg")]
 }
 
 function questionGen(difficulty) {
@@ -38,6 +43,7 @@ function questionGen(difficulty) {
 function setup() {
   menuButtons = Group();
   cactus = Group();
+  boxes = Group();
   correctBoxes = Group();
   incorrectBoxes = Group();
   createCanvas(windowWidth - 20,windowHeight - 20);
@@ -46,10 +52,10 @@ function setup() {
 
 function draw() {
   stats = [];
-
   if (inGame){
-
     game();
+  } else if (endScreen) {
+    fEndScreen();
   }
   else{
     menu();
@@ -57,7 +63,6 @@ function draw() {
   drawSprites();
   showBoxText();
   showStats();
-
 }
 
 
@@ -119,6 +124,30 @@ function menu(){
       background(150);
   }
 }
+
+function fEndScreen(){
+  background(50);
+  fill(255);
+  textSize(90);
+  textAlign(CENTER, CENTER);
+  textFont("Arial");
+  text("Whoops!",width/2-10,90);
+  if(runOnce == false){
+      tryAgian = createSprite(width/2, height-400);
+      tryAgian.addImage("unpressed",retryImg[0]);
+      tryAgian.addImage("pressed",retryImg[1]);
+      tryAgian.onMousePressed = function() {
+        this.changeImage("pressed");
+      }
+      tryAgian.onMouseReleased = function() {
+        this.changeImage("unpressed");
+        endScreen = false;
+        runOnce = false;
+        allSprites.removeSprites();
+      }
+    }
+    runOnce = true;
+  }
 function capMomentum(sprite){
   if (sprite.angularMomentum > 0){
     sprite.angularMomentum /=1.12;//0.2
@@ -200,7 +229,7 @@ function genAnsArray(diff){
 function correctAns(){
   console.log("collided with correct answer")
 }
-function spawnBoxes(x,y,rotated, Group){
+function spawnBoxes(x,y,side){
   array = genAnsArray(3);
   for(i = 0; i < 3; i++){
     spr = createSprite(x+(i+1)*95,y);
@@ -212,13 +241,40 @@ function spawnBoxes(x,y,rotated, Group){
     } else {
       incorrectBoxes.add(spr);
     }
+    boxes.add(spr);
   }
-  boxtext.push([CENTER,CENTER,x+190,y-70,255,18,"Arial",array[4]]);
-
+  if( side==BOTTOM ){
+    boxtext.push([CENTER,CENTER,x+190,y+70,255,18,"Arial",array[4]]);
+  } else if (side == TOP) {
+    boxtext.push([CENTER,CENTER,x+190,y-70,255,18,"Arial",array[4]]);
+  }
+}
+function onBoxHit(goodOrBad){
+  for(i = 0; i < 3; i++){
+    boxes[0].remove();
+  }
+  boxtext=boxtext.slice(4)
+  if(goodOrBad == 0){
+    score++;
+  }else{
+    //show cross on screen or something idk
+  }
+  boxSound[goodOrBad].play();
+}
+function respawnBoxes(){
+      spawnBoxes(width/2 - 185, height/2 - 100,BOTTOM);//DUE TO THE WAY I HAVE CODED THIS, THESE NEED TO BE IN ORDER OF WHEN YOU HIT THEM.
+      spawnBoxes(width/2 - 185, height/2 - 950,BOTTOM);
+      spawnBoxes(width/2 + 2060, height/2 - 900,TOP);
+      spawnBoxes(width/2 + 2060, height/2 - 50,TOP);
+      spawnBoxes(width/2 + 1630, height/2 - 400,BOTTOM);
+      spawnBoxes(width/2 + 755, height/2 - 700,BOTTOM);
 }
 function game(){
   background(233,221,181);
   if(runOnce == false){
+    laps = 0;
+    score = 0;
+    halfwayPointHit = false;
     camera.on();
     track = createSprite(1120 + (width/2),-500 + (height/2));
     track.addImage(trackImg);
@@ -228,28 +284,46 @@ function game(){
     player.scale = 0.2;
     player.angularMomentum = 0;
     player.rotation = -90;
+    halfwayPoint = createSprite(width/2 + 2260, height/2 - 500,350,50)
+    halfwayPoint.shapeColor = color(0,0,0,0)
+    flag1 = createSprite(width/2 - 185, height/2 +100);
+    flag1.addImage(endFlagImg);
+    flag2 = createSprite(width/2 + 190, height/2 +100);
+    flag2.addImage(endFlagImg);
+    flag2.mirrorX(-1);
+    finishLine = createSprite(width/2, height/2 +120,380,50);
+    finishLine.shapeColor = color(0,0,0,0);
+    respawnBoxes();
 
-    spawnBoxes(width/2 - 185, height/2 - 100);
     runOnce=true;
   }
   for(i = 0; i < correctBoxes.length; i++){
     if(correctBoxes[i].overlapPixel(player.position.x,player.position.y) && correctBoxes[i].runOver == false){
       correctBoxes[i].runOver = true;
-      score++;
       console.log("ye");
+      onBoxHit(0);
     }
   }
   for(i = 0; i < incorrectBoxes.length; i++){
     if(incorrectBoxes[i].overlapPixel(player.position.x,player.position.y) && incorrectBoxes[i].runOver == false){
       incorrectBoxes[i].runOver = true;
-
+      onBoxHit(1);
       console.log("no");
-      player.remove();
     }
   }
   camera.position = player.position
   capMomentum(player);
   keyInput();
+  if(player.overlap(halfwayPoint)){
+    halfwayPointHit = true;
+  }
+  if(player.overlap(finishLine) && halfwayPointHit == true){
+    respawnBoxes();
+    halfwayPointHit = false;
+    laps++;
+
+  }
+
   if(!track.overlapPixel(player.position.x,player.position.y)){
     if(Date.now() - lastOnTrack > 34){
       if(player.friction < 0.2){
@@ -268,7 +342,8 @@ function game(){
     lastOnTrack = Date.now();
   }
   addStats(RIGHT, TOP, width-10, 10,255,12,"Arial", "X: " +Math.floor(player.position.x)+ " Y: "+ Math.floor(player.position.y));
-  addStats(LEFT, TOP, 10, 10,255,12,"Arial", "Score: " + score);
+  addStats(LEFT, TOP, 10, 10,0,22,"Arial", "Score: " + score);
+  addStats(LEFT, TOP, 10, 40,0,22,"Arial",  laps + "/3 Laps");
 
 }
 function endGame(){
@@ -276,7 +351,11 @@ function endGame(){
   camera.position.y = height/2;
   inGame = false;
   runOnce = false;
+  endScreen = true;
   boxtext = []
   allSprites.removeSprites();//dead
   return "Ended :)"
+}
+function windowResized() {
+  resizeCanvas(windowWidth - 20,windowHeight - 20);
 }
