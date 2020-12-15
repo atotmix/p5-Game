@@ -7,6 +7,7 @@ var stats = []
 var boxtext = []
 var lastOnTrack;
 var endScreen = false;
+var won = false;
 function preload(){
   highScore = getItem('highScore');
    if (highScore === null) {
@@ -102,24 +103,38 @@ function menu(){
           allSprites.removeSprites();
         }
         menuButtons.add(infoButton);
-        optionsButton = createSprite(width/2, height-200);
-        optionsButton.addImage("unpressed",optionsImg[0]);
-        optionsButton.addImage("pressed",optionsImg[1]);
-        optionsButton.onMousePressed = function() {
-          this.changeImage("pressed");
-        }
-        optionsButton.onMouseReleased = function() {
-          this.changeImage("unpressed");
-          menuPage = 3;
-          runOnce = false;
-          allSprites.removeSprites();
-        }
-        menuButtons.add(optionsButton);
+
         runOnce = true;
 
     }
   } else if(menuPage == 2){
-      background(70);
+    if(runOnce == false){
+        startButton = createSprite(width/2, height-200);
+        startButton.addImage("unpressed",startImg[0]);
+        startButton.addImage("pressed",startImg[1]);
+        startButton.onMousePressed = function() {
+          this.changeImage("pressed");
+        }
+        startButton.onMouseReleased = function() {
+          this.changeImage("unpressed");
+          inGame = true;
+          runOnce = false;
+          menuPage = 1
+          allSprites.removeSprites();
+        }
+        runOnce = true;
+      }
+      fill(255);
+      textSize(25);
+      textAlign(CENTER, CENTER);
+      textFont("Arial");
+      text("Welcome to Maths Racer!\nThe fun game that teaches you quick mental maths",width/2-10,90);
+      fill(255);
+      textSize(14);
+      textAlign(CENTER, CENTER);
+      textFont("Arial");
+      text("The game is quite simple to play. To go forward press ‘w’, to go backwards press ‘s’, to steer press ‘a’ or ‘d’ and to brake press space",width/2,140)
+      text("The aim of the game is to drive into the boxes with the correct answer as quickly as possible, as your score is \nbased on both how fast you completed the track and how many questions you got correct ",width/2,200)
   } else if(menuPage == 3){
       background(150);
   }
@@ -128,12 +143,21 @@ function menu(){
 function fEndScreen(){
   background(50);
   fill(255);
-  textSize(90);
+  textSize(40);
   textAlign(CENTER, CENTER);
   textFont("Arial");
-  text("Whoops!",width/2-10,90);
+  if (won == false){
+    text("Nice try!",width/2,90);
+    textSize(20);
+    text("You came off the track though, give it another go ",width/2, 140);
+  } else {
+    text("Congrats!",width/2,90);
+    textSize(20);
+    text("You completed the game with a score of: " + score,width/2, 140);
+
+  }
   if(runOnce == false){
-      tryAgian = createSprite(width/2, height-400);
+      tryAgian = createSprite(width/2, height/2);
       tryAgian.addImage("unpressed",retryImg[0]);
       tryAgian.addImage("pressed",retryImg[1]);
       tryAgian.onMousePressed = function() {
@@ -174,10 +198,15 @@ function keyInput() {
 
   }
   if (keyDown("w")){
-  player.setSpeed(sqrt(player.velocity.y**2+player.velocity.x**2)+0.2,player.rotation);
+    player.setSpeed(sqrt(player.velocity.y**2+player.velocity.x**2)+0.2,player.rotation);
+  }
+  if (keyDown("s")){
+    player.setSpeed(sqrt(player.velocity.y**2+player.velocity.x**2)+0.2,player.rotation+180);
   }
   if (keyDown("space")){
-  player.setSpeed(sqrt(player.velocity.y**2+player.velocity.x**2)+0.1,player.rotation +180);
+    if(player.friction < 0.9){
+      player.friction += 0.05
+    }
   }
 
 }
@@ -262,12 +291,14 @@ function onBoxHit(goodOrBad){
   boxSound[goodOrBad].play();
 }
 function respawnBoxes(){
-      spawnBoxes(width/2 - 185, height/2 - 100,BOTTOM);//DUE TO THE WAY I HAVE CODED THIS, THESE NEED TO BE IN ORDER OF WHEN YOU HIT THEM.
-      spawnBoxes(width/2 - 185, height/2 - 950,BOTTOM);
-      spawnBoxes(width/2 + 2060, height/2 - 900,TOP);
-      spawnBoxes(width/2 + 2060, height/2 - 50,TOP);
-      spawnBoxes(width/2 + 1630, height/2 - 400,BOTTOM);
-      spawnBoxes(width/2 + 755, height/2 - 700,BOTTOM);
+  boxtext = []
+  boxes.removeSprites();
+  spawnBoxes(width/2 - 185, height/2 - 100,BOTTOM);//DUE TO THE WAY I HAVE CODED THIS, THESE NEED TO BE IN ORDER OF WHEN YOU HIT THEM.
+  spawnBoxes(width/2 - 185, height/2 - 950,BOTTOM);
+  spawnBoxes(width/2 + 2060, height/2 - 900,TOP);
+  spawnBoxes(width/2 + 2060, height/2 - 50,TOP);
+  spawnBoxes(width/2 + 1630, height/2 - 400,BOTTOM);
+  spawnBoxes(width/2 + 755, height/2 - 700,BOTTOM);
 }
 function game(){
   background(233,221,181);
@@ -325,33 +356,41 @@ function game(){
   }
 
   if(!track.overlapPixel(player.position.x,player.position.y)){
-    if(Date.now() - lastOnTrack > 34){
+    if(Date.now() - lastOnTrack > 80){
       if(player.friction < 0.2){
         player.friction += 0.005
       }
       addStats(CENTER, CENTER, (width/2), (height/2),color(255,0,0),24,"Arial", "Get back on the track!");
       countdown = 11 + Math.floor((lastOnTrack - Date.now()) / 1000)
       addStats(CENTER, CENTER, (width/2), (height/2) + 30,color(255,0,0),24,"Arial", "Restarting in: " +  countdown);
-      if(countdown == -1){
-        endGame();
+      if(countdown < -1){
+        endGame(0);
       }
     }
   }
-  else{
+  else if (!keyDown("space")){
     player.friction = 0.02;
     lastOnTrack = Date.now();
+  }
+  if (laps == 3){
+    endGame(1);
   }
   addStats(RIGHT, TOP, width-10, 10,255,12,"Arial", "X: " +Math.floor(player.position.x)+ " Y: "+ Math.floor(player.position.y));
   addStats(LEFT, TOP, 10, 10,0,22,"Arial", "Score: " + score);
   addStats(LEFT, TOP, 10, 40,0,22,"Arial",  laps + "/3 Laps");
 
 }
-function endGame(){
+function endGame(win){
   camera.position.x = width/2;
   camera.position.y = height/2;
   inGame = false;
   runOnce = false;
   endScreen = true;
+  if (win == 1){
+    won = true;
+  } else {
+    won = false;
+  }
   boxtext = []
   allSprites.removeSprites();//dead
   return "Ended :)"
